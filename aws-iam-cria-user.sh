@@ -1,7 +1,6 @@
 #!/bin/bash
-# Purpose: Enforces MFA usage for groups created in AWS
-# Usage: ./aws-create-policy.sh <input CSV file format>
-# Example: ./aws-create-group.sh users.csv
+# Purpose: Automates user creation in AWS
+# Usage: ./aws-iam-create-user.sh <input CSV file format>
 # Input file format: users,group,password
 # Author: Shaif Ali Khan
 # ------------------------------------------
@@ -19,13 +18,17 @@ command -v dos2unix >/dev/null || { echo "dos2unix utility not found. Please ins
 # Convert the input file to Unix format
 dos2unix $INPUT
 
-# Reads each line in the CSV file and processes the group column
-while read -r user group password || [ -n "$group" ]
+# Reads each line in the CSV file and processes the user, group, and password columns
+while read -r user group password || [ -n "$user" ]
 do
     # Skips the header line with column names
-    if [ "$group" != "group" ]; then
-        # Attaches an IAM policy to enforce MFA for the specified group
-        aws iam attach-group-policy --policy-arn arn:aws:iam::248420709401:policy/forceMFA --group-name $group
+    if [ "$user" != "user" ]; then
+        # Creates an IAM user in AWS
+        aws iam create-user --user-name $user
+        # Sets a login profile with a password for the user and requires a password reset at first login
+        aws iam create-login-profile --password-reset-required --user-name $user --password $password
+        # Adds the user to the specified IAM group
+        aws iam add-user-to-group --group-name $group --user-name $user
     fi
 done < $INPUT
 
